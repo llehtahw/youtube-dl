@@ -16,6 +16,7 @@ from ..utils import (
     decode_packed_codes,
     get_element_by_id,
     get_element_by_attribute,
+    get_element_by_class,
     ExtractorError,
     ohdave_rsa_encrypt,
     remove_start,
@@ -344,7 +345,7 @@ class IqiyiIE(InfoExtractor):
         # Sometimes there are playlist links in individual videos, so treat it
         # as a single video first
         tvid = self._search_regex(
-            r'data-(?:player|shareplattrigger)-tvid\s*=\s*[\'"](\d+)', webpage, 'tvid', default=None)
+            r'\?tvid=(\d+)&', webpage, 'tvid', default=None)
         if tvid is None:
             playlist_result = self._extract_playlist(webpage)
             if playlist_result:
@@ -352,7 +353,7 @@ class IqiyiIE(InfoExtractor):
             raise ExtractorError('Can\'t find any video')
 
         video_id = self._search_regex(
-            r'data-(?:player|shareplattrigger)-videoid\s*=\s*[\'"]([a-f\d]+)', webpage, 'video_id')
+            r'''param\['vid'\] = "(\w+)"''', webpage, 'video_id')
 
         formats = []
         for _ in range(5):
@@ -383,9 +384,10 @@ class IqiyiIE(InfoExtractor):
             self._sleep(5, video_id)
 
         self._sort_formats(formats)
-        title = (get_element_by_id('widget-videotitle', webpage)
-                 or clean_html(get_element_by_attribute('class', 'mod-play-tit', webpage))
-                 or self._html_search_regex(r'<span[^>]+data-videochanged-title="word"[^>]*>([^<]+)</span>', webpage, 'title'))
+        title = clean_html(get_element_by_class('player-title', webpage)).replace(' ', '') \
+            or (get_element_by_id('widget-videotitle', webpage)
+            or clean_html(get_element_by_attribute('class', 'mod-play-tit', webpage))
+            or self._html_search_regex(r'<span[^>]+data-videochanged-title="word"[^>]*>([^<]+)</span>', webpage, 'title'))
 
         return {
             'id': video_id,
